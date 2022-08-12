@@ -1,0 +1,87 @@
+---
+title: "runoff_volumes"
+author: "Meagan Brown"
+date: '2022-08-12'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(dplyr)
+```
+
+```{r}
+#Source function
+
+source(here("src", "storm_runoff.R"))
+
+# estimate stormwater volume for a watershed of 182 acres, over a range of estimates for the impervious fraction (from 0.6 to 0.8, by increments of 0.01).
+
+range <- seq(from = 0.6, to = 0.8, by = 0.01)
+runoff <- predict_runoff(range, 182)
+
+runoff_df <- data.frame(range, runoff)
+
+runoff_plot <- ggplot(data = runoff_df,
+       aes(x = range,
+           y = runoff)) +
+  geom_point() +
+  geom_line() +
+  theme_classic() +
+  labs(x = "Range",
+       y = "Runoff")
+
+ggsave(here("figs", "runoff_plot.png"))
+```
+
+
+```{r}
+us_tilapia_imports <- read_csv(here("data", "us_tilapia_imports.csv"))
+
+tilapia_imports_df <- us_tilapia_imports %>% 
+  pivot_longer(cols = -country,
+               names_to = "year",
+               values_to = "volume") %>% 
+  mutate(year = as.numeric(year)) %>% 
+  group_by(year) %>% 
+  summarize(total_volume = sum(volume, na.rm = TRUE))
+  
+ yearly_tilapia_tot <- ggplot(data = tilapia_imports_df,
+                             aes(x = year,
+                                 y = total_volume)) +
+  geom_line()
+
+
+ggsave(here("figs", "yearly_tilapia_tot.png"))
+
+# Create a subset that only retains imports from Ecuador, Honduras, Costa Rica, and Mexico (you decide what to name this)
+
+tilapia_imports_subset <- us_tilapia_imports %>% 
+  filter(country %in% c("Ecuador", 
+                        "Honduras", 
+                        "Costa Rica", 
+                        "Mexico")) %>% 
+  pivot_longer(cols = -country,
+               names_to = "year",
+               values_to = "volume") %>% 
+  mutate(year = as.numeric(year)) %>% 
+  group_by(year, country) %>% 
+  summarize(total_volume = sum(volume, na.rm = TRUE))
+
+
+yearly_tilapia_plot <- ggplot(data = tilapia_imports_subset,
+                             aes(x = year,
+                                 y = total_volume)) +
+                      geom_line(aes(color = country)) +
+  facet_wrap(~country)
+
+ggsave(here("figs", "yearly_tilapia_plot.jpg"))
+
+```
+
